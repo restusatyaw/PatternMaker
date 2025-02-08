@@ -1,11 +1,11 @@
-<?php 
+<?php
 
 namespace Restusatyaw\PattrenMaker\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Restusatyaw\PattrenMaker\Commands\MakeSeederAuto;
-use Restusatyaw\PattrenMaker\Commands\MakePattren;
-use Restusatyaw\PattrenMaker\Commands\MakePattrenFull;
+use Restusatyaw\PattrenMaker\Console\Commands\MakeAutomaticSeeder;
+use Restusatyaw\PattrenMaker\Console\Commands\MakePattren;
+use Restusatyaw\PattrenMaker\Console\Commands\MakeFullPattren;
 
 class PattrenMakerServiceProvider extends ServiceProvider
 {
@@ -18,9 +18,9 @@ class PattrenMakerServiceProvider extends ServiceProvider
     {
         // Daftarkan command jika kamu ingin membuat perintah Artisan
         $this->commands([
-            MakeSeederAuto::class,
+            MakeAutomaticSeeder::class,
             MakePattren::class,
-            MakePattrenFull::class,
+            MakeFullPattren::class,
         ]);
     }
 
