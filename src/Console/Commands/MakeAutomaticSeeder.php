@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Console\Commands;
+namespace Restusatyaw\PattrenMaker\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
-class GenerateSeeder extends Command
+class MakeAutomaticSeeder extends Command
 {
     protected $signature = 'make:seeder-auto {table}';
     protected $description = 'Membuat seeder secara otomatis berdasarkan migration dengan UUID & relasi';

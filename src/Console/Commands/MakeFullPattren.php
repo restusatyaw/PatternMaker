@@ -1,10 +1,10 @@
 <?php
-namespace App\Console\Commands;
+namespace Restusatyaw\PattrenMaker\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
-class MakeFullStructure extends Command
+class MakeFullPattren extends Command
 {
     protected $signature = 'make:pattren-full {name}';
     protected $description = 'Membuat Model, Migration, Service, Repository, dan DTO sekaligus';
