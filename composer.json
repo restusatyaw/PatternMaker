@@ -15,7 +15,12 @@
         "laravel": {
             "providers": [
                 "Restusatyaw\\LaravelPattrenMaker\\LaravelPattrenMakerServiceProvider"
-            ]
+            ],
+            "commands": [
+            "Restusatyaw\\PattrenMaker\\Commands\\MakeSeederAuto",
+            "Restusatyaw\\PattrenMaker\\Commands\\MakePattren",
+            "Restusatyaw\\PattrenMaker\\Commands\\MakePattrenFull"
+        ]
         }
     }
 }
