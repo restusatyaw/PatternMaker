@@ -27,20 +27,43 @@ Lalu jalankan:
 php artisan vendor:publish --provider="Restusatyaw\PattrenMaker\Providers\PattrenMakerServiceProvider"
 ```
 
+
 ---
 
 ## ⚡ Cara Penggunaan  
+
+### 🔹 **Membuat Service, Repository, Model, Migration dan DTO**  
+Jalankan perintah berikut untuk membuat struktur kode secara otomatis:  
+
+```sh
+php artisan make:pattren-full NamaModul
+```
+
+Contoh:  
+```sh
+php artisan make:pattren-full User
+```
+Perintah ini akan membuat:  
+- `app/Repositories/UserRepository.php`  
+- `app/Services/UserService.php`  
+- `app/DTOs/UserDTO.php`
+- `app/Model/User.php`
+- `app/Model/0001_01_01_000000_create_users_table.php`
+
+
+---
+
 
 ### 🔹 **Membuat Service, Repository, dan DTO**  
 Jalankan perintah berikut untuk membuat struktur kode secara otomatis:  
 
 ```sh
-php artisan make:full NamaModel
+php artisan make:pattren NamaModel
 ```
 
 Contoh:  
 ```sh
-php artisan make:full User
+php artisan make:pattren User
 ```
 Perintah ini akan membuat:  
 - `app/Repositories/UserRepository.php`  
@@ -48,6 +71,8 @@ Perintah ini akan membuat:
 - `app/DTOs/UserDTO.php`  
 
 ---
+
+
 
 ### 🔹 **Membuat Seeder Secara Otomatis**  
 Untuk membuat seeder berdasarkan migration yang ada:  
