@@ -15,6 +15,8 @@ class MakePattren extends Command
 
     public function handle()
     {
+        $this->info("MAKE SURE YOUR TABLE HAS BEEN MIGRATE TO DATABASE !");
+
         $name = $this->argument('name');
         $table = Str::plural(Str::snake($name)); // Convert to snake_case and pluralize
         

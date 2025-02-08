@@ -12,6 +12,9 @@ class MakeFullPattren extends Command
 
     public function handle()
     {
+
+        $this->info("MAKE SURE YOUR TABLE HAS BEEN MIGRATE TO DATABASE !");
+
         $name = $this->argument('name');
         
         // 1. Buat Model dengan Migration & Seeder
