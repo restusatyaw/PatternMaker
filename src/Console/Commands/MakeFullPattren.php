@@ -90,13 +90,19 @@ class MakeFullPattren extends Command
 
             public function getFilteredData(\$filterData)
             {
-                \$data = $name::query();
+                \$query = $name::query();
 
+                // Dynamic search based on searchable columns
                 if (isset(\$filterData['search']) && \$filterData['search'] != '') {
-                    \$data->where('name', 'like', '%' . \$filterData['search'] . '%');
+                    \$query->where(function(\$q) use (\$filterData) {
+                        \$columns = Schema::getColumnListing((new $name)->getTable());
+                        foreach(\$columns as \$column) {
+                            \$q->orWhere(\$column, 'like', '%' . \$filterData['search'] . '%');
+                        }
+                    });
                 }
 
-                return \$data;
+                return \$query;
             }
         }
         PHP;
@@ -110,8 +116,9 @@ class MakeFullPattren extends Command
 
         namespace App\Services;
 
-        use App\Repositories\\$name.''.Repository;
-        use App\DTOs\\$name.''.DTO;
+        use App\Repositories\\{$name}Repository;
+        use App\DTOs\\{$name}DTO;
+        use Illuminate\Support\Collection;
         use Yajra\DataTables\Facades\DataTables;
 
         class {$name}Service
@@ -123,58 +130,54 @@ class MakeFullPattren extends Command
                 \$this->{$name}Repository = \${$name}Repository;
             }
 
-            public function getAll()
+            public function getAll(): Collection
             {
                 \$data = \$this->{$name}Repository->getAll();
-
-                // Convert each model to DTO
-                return \$data->map(function (\$item) {
-                    return new {$name}DTO(\$item);
-                });
+                return \$data->map(fn(\$item) => \$this->toDTO(\$item));
             }
 
             public function findById(\$id)
             {
-                return \$this->{$name}Repository->findById(\$id);
+                \$item = \$this->{$name}Repository->findById(\$id);
+                return \$item ? \$this->toDTO(\$item) : null;
             }
 
             public function create(array \$data)
             {
-                // Convert incoming data to DTO
-                \$dto = new {$name}DTO((object) \$data);
-
-                // Create new entity using the repository
-                return \$this->{$name}Repository->create(\$dto);
+                \$item = \$this->{$name}Repository->create(\$data);
+                return \$this->toDTO(\$item);
             }
 
             public function update(\$id, array \$data)
             {
-                // Convert incoming data to DTO
-                \$dto = new {$name}DTO((object) \$data);
-
-                // Update entity using the repository
-                return \$this->{$name}Repository->update(\$id, \$dto);
+                \$item = \$this->{$name}Repository->update(\$id, \$data);
+                return \$item ? \$this->toDTO(\$item) : null;
             }
 
-            public function delete(\$id)
+            public function delete(\$id): bool
             {
                 return \$this->{$name}Repository->delete(\$id);
             }
 
-            public function getDatatable(\$filterData)
+            public function getDatatable(array \$filterData)
             {
-                \$data = \$this->{$name}Repository->getFilteredData(\$filterData);
+                \$query = \$this->{$name}Repository->getFilteredData(\$filterData);
 
-                return DataTables::of(\$data)
-                    ->addColumn('action', function (\$data) {
-                        \$action = '';
-                        // Custom action logic can go here
-                        return \$action;
+                return DataTables::of(\$query)
+                    ->addColumn('action', function (\$row) {
+                        return view('components.action-buttons', [
+                            'id' => \$row->id,
+                            'editRoute' => route('{$name}.edit', \$row->id),
+                            'deleteRoute' => route('{$name}.destroy', \$row->id)
+                        ])->render();
                     })
-                    ->editColumn('object_name', function (\$data) {
-                        return \$data->object_name ?? 'N/A';  // Add a fallback for null values
-                    })
-                    ->rawColumns(['action'])->make(true);
+                    ->rawColumns(['action'])
+                    ->make(true);
+            }
+
+            private function toDTO(\$model): {$name}DTO
+            {
+                return new {$name}DTO(...\$model->toArray());
             }
         }
         PHP;

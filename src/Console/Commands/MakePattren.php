@@ -195,7 +195,6 @@ class MakePattren extends Command
 
         $columns = Schema::getColumnListing($table);
         $properties = '';
-        $constructor = '';
         $toArray = '';
         
         foreach ($columns as $column) {
@@ -210,13 +209,10 @@ class MakePattren extends Command
                 default => 'string'
             };
 
-            // Handle nullable columns
-            if (Schema::getConnection()->getDoctrineColumn($table, $column)->getNotnull() === false) {
-                $type = '?' . $type;
-            }
+            // All properties are nullable in DTO for flexibility
+            $type = $type;
 
             $properties .= "    public {$type} \${$column};\n";
-            $constructor .= "        \$this->{$column} = \${$column};\n";
             $toArray .= "            '{$column}' => \$this->{$column},\n";
         }
 
@@ -237,7 +233,7 @@ class MakePattren extends Command
                 foreach (\$data as \$key => \$value) {
                     if (property_exists(\$this, \$key)) {
                         if (\$value instanceof DateTime || (is_string(\$value) && strtotime(\$value))) {
-                            \$this->\$key = new DateTime(\$value);
+                            \$this->\$key = \$value instanceof DateTime ? \$value : new DateTime(\$value);
                         } else {
                             \$this->\$key = \$value;
                         }
@@ -247,9 +243,18 @@ class MakePattren extends Command
 
             public function toArray(): array
             {
-                return [
+                \$array = [
         {$toArray}
                 ];
+
+                // Convert DateTime objects to strings
+                foreach (\$array as \$key => \$value) {
+                    if (\$value instanceof DateTime) {
+                        \$array[\$key] = \$value->format('Y-m-d H:i:s');
+                    }
+                }
+
+                return \$array;
             }
 
             public function jsonSerialize(): array
