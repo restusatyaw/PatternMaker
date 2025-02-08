@@ -4,6 +4,9 @@ namespace Restusatyaw\PattrenMaker\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+
+
 
 class MakePattren extends Command
 {
@@ -57,6 +60,7 @@ class MakePattren extends Command
 
     private function getRepositoryTemplate($name)
     {
+        
         return <<<PHP
         <?php
 
@@ -94,6 +98,7 @@ class MakePattren extends Command
 
     private function getServiceTemplate($name)
     {
+        $name = Str::studly($name); 
         return <<<PHP
         <?php
 

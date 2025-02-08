@@ -3,6 +3,7 @@ namespace Restusatyaw\PattrenMaker\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class MakeFullPattren extends Command
 {
@@ -92,6 +93,7 @@ class MakeFullPattren extends Command
 
     private function getServiceTemplate($name)
     {
+        $name = Str::studly($name); 
         return <<<PHP
         <?php
 
