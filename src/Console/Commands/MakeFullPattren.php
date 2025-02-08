@@ -99,7 +99,7 @@ class MakeFullPattren extends Command
 
         namespace App\Services;
 
-        use App\Repositories\\{$name}Repository;
+        use App\Repositories\\$name.''.Repository;
 
         class {$name}Service
         {
