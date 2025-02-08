@@ -1,26 +1,28 @@
 {
-    "name": "restusatyaw/laravel-pattrenmaker",
-    "description": "Package untuk membuat Model, Migration, Seeder, Service, Repository, dan DTO secara otomatis",
+    "name": "restusatyaw/pattren-maker",
+    "description": "Automatic Service, Repository, DTO, and Seeder Generator for Laravel",
     "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Restusatyaw",
+            "email": "kadekrestusatyawardana@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.0",
+        "illuminate/support": "^9.0|^10.0|^11.0"
+    },
     "autoload": {
         "psr-4": {
-            "Restusatyaw\\LaravelPattrenMaker\\": "src/"
+            "Restusatyaw\\PattrenMaker\\": "src/"
         }
-    },
-    "require": {
-        "php": ">=8.1",
-        "illuminate/support": "^10.0"
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Restusatyaw\\LaravelPattrenMaker\\LaravelPattrenMakerServiceProvider"
-            ],
-            "commands": [
-            "Restusatyaw\\PattrenMaker\\Commands\\MakeSeederAuto",
-            "Restusatyaw\\PattrenMaker\\Commands\\MakePattren",
-            "Restusatyaw\\PattrenMaker\\Commands\\MakePattrenFull"
-        ]
+                "Restusatyaw\\PattrenMaker\\AutoGeneratorServiceProvider"
+            ]
         }
     }
 }
