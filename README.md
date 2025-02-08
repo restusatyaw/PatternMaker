@@ -53,7 +53,7 @@ Perintah ini akan membuat:
 Untuk membuat seeder berdasarkan migration yang ada:  
 
 ```sh
-php artisan make:seeder-auto users
+php artisan make:seeder-auto nama_table sesuai migration
 ```
 
 Lalu jalankan:  
