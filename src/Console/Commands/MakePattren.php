@@ -189,11 +189,12 @@ class MakePattren extends Command
 
         foreach ($columns as $column) {
             $columnType = Schema::getColumnType($table, $column);
-            $type = 'string'; // Default type
+            $type = 'string'; // Default type is string
 
             // Handle UUID detection and other data types
             if (str_contains($column, 'id') || $columnType === 'char' || $columnType === 'string') {
-                if (strlen($columnType) == 36) {
+                // UUID typically stored as string (char(36))
+                if (str_contains($column, 'id') || strlen($columnType) == 36) {
                     $type = 'string';  // UUID
                 }
             } elseif (str_contains($columnType, 'int')) {
@@ -201,12 +202,12 @@ class MakePattren extends Command
             } elseif (str_contains($columnType, 'decimal') || str_contains($columnType, 'float')) {
                 $type = 'float';
             } elseif (str_contains($columnType, 'date') || str_contains($columnType, 'timestamp')) {
-                $type = 'string';  // You can adjust this to DateTime if required
+                $type = '\DateTime';  // Use DateTime class for date and timestamp
             } elseif (str_contains($columnType, 'boolean')) {
                 $type = 'bool';
             }
 
-            // Add property and constructor for each column
+            // Add property for each column with appropriate type
             $properties .= "    public {$type} \${$column};\n";
             $constructor .= "                public {$type} \${$column},\n";
         }
@@ -228,4 +229,5 @@ class MakePattren extends Command
     }
     PHP;
     }
+
 }
