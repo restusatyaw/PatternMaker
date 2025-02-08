@@ -24,7 +24,7 @@ composer require restusatyaw/pattren-maker
 Lalu jalankan:  
 
 ```sh
-php artisan vendor:publish --provider="Restusatyaw\PattrenMaker\AutoGeneratorServiceProvider"
+php artisan vendor:publish --provider="Restusatyaw\PattrenMaker\Providers\PattrenMakerServiceProvider"
 ```
 
 ---
