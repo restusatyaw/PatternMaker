@@ -37,6 +37,41 @@ class MakeAutomaticSeeder extends Command
         File::put($seederPath, $seederTemplate);
 
         $this->info("Seeder berhasil dibuat: {$seederPath}");
+
+        // Register Seeder ke DatabaseSeeder
+        $this->registerSeederInDatabaseSeeder($className);
+    }
+
+    private function registerSeederInDatabaseSeeder($className)
+    {
+        $databaseSeederPath = database_path('seeders/DatabaseSeeder.php');
+
+        if (!File::exists($databaseSeederPath)) {
+            $this->error("DatabaseSeeder tidak ditemukan.");
+            return;
+        }
+
+        // Baca konten DatabaseSeeder
+        $databaseSeederContent = File::get($databaseSeederPath);
+
+        // Cek apakah seeder sudah ada dalam array $this->call()
+        if (strpos($databaseSeederContent, $className) === false) {
+            // Jika belum ada, tambahkan di dalam array $this->call()
+            $insertSeederCode = "\n            {$className}::class,\n";
+
+            // Cari posisi di dalam array $this->call()
+            $callPosition = strpos($databaseSeederContent, '$this->call([') + strlen('$this->call([');
+
+            // Tambahkan seeder baru ke dalam array
+            $newContent = substr_replace($databaseSeederContent, $insertSeederCode, $callPosition, 0);
+
+            // Simpan perubahan ke dalam DatabaseSeeder
+            File::put($databaseSeederPath, $newContent);
+
+            $this->info("Seeder '{$className}' berhasil ditambahkan ke DatabaseSeeder.");
+        } else {
+            $this->info("Seeder '{$className}' sudah terdaftar di DatabaseSeeder.");
+        }
     }
 
     private function generateFakerData($columns, $table)
