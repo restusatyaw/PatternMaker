@@ -21,11 +21,6 @@ Tambahkan package ini ke proyek Laravel:
 composer require restusatyaw/pattren-maker
 ```
 
-Lalu jalankan:  
-
-```sh
-php artisan vendor:publish --provider="Restusatyaw\PattrenMaker\Providers\PattrenMakerServiceProvider"
-```
 
 
 ---
