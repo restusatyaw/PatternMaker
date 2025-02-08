@@ -11,12 +11,19 @@ use Illuminate\Support\Facades\DB;
 class MakePattren extends Command
 {
     protected $signature = 'make:pattren {name}';
-    protected $description = 'Create Service, Repository, dan DTO automatic';
+    protected $description = 'Create Service, Repository, and DTO automatic';
 
     public function handle()
     {
         $name = $this->argument('name');
+        $table = Str::plural(Str::snake($name)); // Convert to snake_case and pluralize
         
+        // Verify if table exists
+        if (!Schema::hasTable($table)) {
+            $this->error("Table '{$table}' does not exist!");
+            return;
+        }
+
         // 1. Create Repositories
         $repositoryPath = app_path("Repositories/{$name}Repository.php");
         if (!File::exists(app_path('Repositories'))) {
@@ -38,7 +45,7 @@ class MakePattren extends Command
         if (!File::exists(app_path('DTOs'))) {
             File::makeDirectory(app_path('DTOs'), 0755, true);
         }
-        File::put($dtoPath, $this->getDTOTemplate($name));
+        File::put($dtoPath, $this->getDTOTemplate($name, $table));
         $this->info("DTO created: {$dtoPath}");
         
         $this->info('✅ Services, Repositories And DTO successfully created!');
@@ -87,13 +94,19 @@ class MakePattren extends Command
 
             public function getFilteredData(\$filterData)
             {
-                \$data = $name::query();
+                \$query = $name::query();
 
+                // Dynamic search based on searchable columns
                 if (isset(\$filterData['search']) && \$filterData['search'] != '') {
-                    \$data->where('name', 'like', '%' . \$filterData['search'] . '%');
+                    \$query->where(function(\$q) use (\$filterData) {
+                        \$columns = Schema::getColumnListing((new $name)->getTable());
+                        foreach(\$columns as \$column) {
+                            \$q->orWhere(\$column, 'like', '%' . \$filterData['search'] . '%');
+                        }
+                    });
                 }
 
-                return \$data;
+                return \$query;
             }
         }
         PHP;
@@ -107,8 +120,9 @@ class MakePattren extends Command
 
         namespace App\Services;
 
-        use App\Repositories\\$name.''.Repository;
-        use App\DTOs\\$name.''.DTO;
+        use App\Repositories\\{$name}Repository;
+        use App\DTOs\\{$name}DTO;
+        use Illuminate\Support\Collection;
         use Yajra\DataTables\Facades\DataTables;
 
         class {$name}Service
@@ -120,114 +134,129 @@ class MakePattren extends Command
                 \$this->{$name}Repository = \${$name}Repository;
             }
 
-            public function getAll()
+            public function getAll(): Collection
             {
                 \$data = \$this->{$name}Repository->getAll();
-
-                // Convert each model to DTO
-                return \$data->map(function (\$item) {
-                    return new {$name}DTO(\$item);
-                });
+                return \$data->map(fn(\$item) => \$this->toDTO(\$item));
             }
 
             public function findById(\$id)
             {
-                return \$this->{$name}Repository->findById(\$id);
+                \$item = \$this->{$name}Repository->findById(\$id);
+                return \$item ? \$this->toDTO(\$item) : null;
             }
 
             public function create(array \$data)
             {
-                // Convert incoming data to DTO
-                \$dto = new {$name}DTO((object) \$data);
-
-                // Create new entity using the repository
-                return \$this->{$name}Repository->create(\$dto);
+                \$item = \$this->{$name}Repository->create(\$data);
+                return \$this->toDTO(\$item);
             }
 
             public function update(\$id, array \$data)
             {
-                // Convert incoming data to DTO
-                \$dto = new {$name}DTO((object) \$data);
-
-                // Update entity using the repository
-                return \$this->{$name}Repository->update(\$id, \$dto);
+                \$item = \$this->{$name}Repository->update(\$id, \$data);
+                return \$item ? \$this->toDTO(\$item) : null;
             }
 
-            public function delete(\$id)
+            public function delete(\$id): bool
             {
                 return \$this->{$name}Repository->delete(\$id);
             }
 
-            public function getDatatable(\$filterData)
+            public function getDatatable(array \$filterData)
             {
-                \$data = \$this->{$name}Repository->getFilteredData(\$filterData);
+                \$query = \$this->{$name}Repository->getFilteredData(\$filterData);
 
-                return DataTables::of(\$data)
-                    ->addColumn('action', function (\$data) {
-                        \$action = '';
-                        // Custom action logic can go here
-                        return \$action;
+                return DataTables::of(\$query)
+                    ->addColumn('action', function (\$row) {
+                        return view('components.action-buttons', [
+                            'id' => \$row->id,
+                            'editRoute' => route('{$name}.edit', \$row->id),
+                            'deleteRoute' => route('{$name}.destroy', \$row->id)
+                        ])->render();
                     })
-                    ->editColumn('object_name', function (\$data) {
-                        return \$data->object_name ?? 'N/A';  // Add a fallback for null values
-                    })
-                    ->rawColumns(['action'])->make(true);
+                    ->rawColumns(['action'])
+                    ->make(true);
+            }
+
+            private function toDTO(\$model): {$name}DTO
+            {
+                return new {$name}DTO(...\$model->toArray());
             }
         }
         PHP;
     }
 
-    private function getDTOTemplate($name, $table = null)
+    private function getDTOTemplate($name, $table)
     {
-        if (!$table) {
-            $table = Str::plural(strtolower($name)); // Default to plural form for table name
+        if (!Schema::hasTable($table)) {
+            return "// Table {$table} does not exist";
         }
 
         $columns = Schema::getColumnListing($table);
         $properties = '';
         $constructor = '';
-
+        $toArray = '';
+        
         foreach ($columns as $column) {
             $columnType = Schema::getColumnType($table, $column);
-            $type = 'string'; // Default type is string
+            
+            // Map database types to PHP types
+            $type = match(true) {
+                in_array($columnType, ['integer', 'bigint', 'smallint']) => 'int',
+                in_array($columnType, ['decimal', 'float', 'double']) => 'float',
+                in_array($columnType, ['boolean']) => 'bool',
+                in_array($columnType, ['datetime', 'timestamp']) => '?\\DateTime',
+                default => 'string'
+            };
 
-            // Handle UUID detection and other data types
-            if (str_contains($column, 'id') || $columnType === 'char' || $columnType === 'string') {
-                // UUID typically stored as string (char(36))
-                if (str_contains($column, 'id') || strlen($columnType) == 36) {
-                    $type = 'string';  // UUID
-                }
-            } elseif (str_contains($columnType, 'int')) {
-                $type = 'int';
-            } elseif (str_contains($columnType, 'decimal') || str_contains($columnType, 'float')) {
-                $type = 'float';
-            } elseif (str_contains($columnType, 'date') || str_contains($columnType, 'timestamp')) {
-                $type = '\DateTime';  // Use DateTime class for date and timestamp
-            } elseif (str_contains($columnType, 'boolean')) {
-                $type = 'bool';
+            // Handle nullable columns
+            if (Schema::getConnection()->getDoctrineColumn($table, $column)->getNotnull() === false) {
+                $type = '?' . $type;
             }
 
-            // Add property for each column with appropriate type
             $properties .= "    public {$type} \${$column};\n";
-            $constructor .= "                public {$type} \${$column},\n";
+            $constructor .= "        \$this->{$column} = \${$column};\n";
+            $toArray .= "            '{$column}' => \$this->{$column},\n";
         }
 
-        $constructor = rtrim($constructor, ',\n'); // Remove trailing comma
-
         return <<<PHP
-    <?php
+        <?php
 
-    namespace App\DTOs;
+        namespace App\DTOs;
 
-    class {$name}DTO
-    {
-    {$properties}
+        use JsonSerializable;
+        use DateTime;
 
-        public function __construct(
-    {$constructor}
-        ) {}
+        class {$name}DTO implements JsonSerializable
+        {
+        {$properties}
+            public function __construct(
+                array \$data = []
+            ) {
+                foreach (\$data as \$key => \$value) {
+                    if (property_exists(\$this, \$key)) {
+                        if (\$value instanceof DateTime || (is_string(\$value) && strtotime(\$value))) {
+                            \$this->\$key = new DateTime(\$value);
+                        } else {
+                            \$this->\$key = \$value;
+                        }
+                    }
+                }
+            }
+
+            public function toArray(): array
+            {
+                return [
+        {$toArray}
+                ];
+            }
+
+            public function jsonSerialize(): array
+            {
+                return \$this->toArray();
+            }
+        }
+        PHP;
     }
-    PHP;
-    }
-
 }
