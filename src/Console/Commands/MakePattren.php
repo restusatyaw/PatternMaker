@@ -110,12 +110,30 @@ class MakePattren extends Command
             {
                 return $name::destroy(\$id);
             }
+
+            public function getFilteredData(\$filterData)
+            {
+                \$query = $name::query();
+
+                // Dynamic search based on searchable columns
+                if (isset(\$filterData['search']) && \$filterData['search'] != '') {
+                    \$query->where(function(\$q) use (\$filterData) {
+                        \$columns = Schema::getColumnListing((new $name)->getTable());
+                        foreach(\$columns as \$column) {
+                            \$q->orWhere(\$column, 'like', '%' . \$filterData['search'] . '%');
+                        }
+                    });
+                }
+
+                return \$query;
+            }
         }
         PHP;
     }
 
     private function getServiceTemplate($name)
     {
+        $name = Str::studly($name);
         return <<<PHP
         <?php
 
@@ -123,6 +141,8 @@ class MakePattren extends Command
 
         use App\Repositories\\{$name}Repository;
         use App\DTOs\\{$name}DTO;
+        use Illuminate\Support\Collection;
+        use Yajra\DataTables\Facades\DataTables;
 
         class {$name}Service
         {
@@ -133,29 +153,54 @@ class MakePattren extends Command
                 \$this->{$name}Repository = \${$name}Repository;
             }
 
-            public function getAll()
+            public function getAll(): Collection
             {
-                return \$this->{$name}Repository->getAll();
+                \$data = \$this->{$name}Repository->getAll();
+                return \$data->map(fn(\$item) => \$this->toDTO(\$item));
             }
 
             public function findById(\$id)
             {
-                return \$this->{$name}Repository->findById(\$id);
+                \$item = \$this->{$name}Repository->findById(\$id);
+                return \$item ? \$this->toDTO(\$item) : null;
             }
 
             public function create(array \$data)
             {
-                return \$this->{$name}Repository->create(\$data);
+                \$item = \$this->{$name}Repository->create(\$data);
+                return \$this->toDTO(\$item);
             }
 
             public function update(\$id, array \$data)
             {
-                return \$this->{$name}Repository->update(\$id, \$data);
+                \$item = \$this->{$name}Repository->update(\$id, \$data);
+                return \$item ? \$this->toDTO(\$item) : null;
             }
 
-            public function delete(\$id)
+            public function delete(\$id): bool
             {
                 return \$this->{$name}Repository->delete(\$id);
+            }
+
+            public function getDatatable(array \$filterData)
+            {
+                \$query = \$this->{$name}Repository->getFilteredData(\$filterData);
+
+                return DataTables::of(\$query)
+                    ->addColumn('action', function (\$row) {
+                        return view('components.action-buttons', [
+                            'id' => \$row->id,
+                            'editRoute' => route('{$name}.edit', \$row->id),
+                            'deleteRoute' => route('{$name}.destroy', \$row->id)
+                        ])->render();
+                    })
+                    ->rawColumns(['action'])
+                    ->make(true);
+            }
+
+            private function toDTO(\$model): {$name}DTO
+            {
+                return new {$name}DTO(...\$model->toArray());
             }
         }
         PHP;
@@ -163,11 +208,31 @@ class MakePattren extends Command
 
     private function getDTOTemplate($name, $table)
     {
+        if (!Schema::hasTable($table)) {
+            return "// Table {$table} does not exist";
+        }
+
         $columns = Schema::getColumnListing($table);
         $properties = '';
+        $toArray = '';
         
         foreach ($columns as $column) {
-            $properties .= "    public \${$column};\n";
+            $columnType = Schema::getColumnType($table, $column);
+            
+            // Map database types to PHP types
+            $type = match(true) {
+                in_array($columnType, ['integer', 'bigint', 'smallint']) => 'int',
+                in_array($columnType, ['decimal', 'float', 'double']) => 'float',
+                in_array($columnType, ['boolean']) => 'bool',
+                in_array($columnType, ['datetime', 'timestamp']) => '?\\DateTime',
+                default => 'string'
+            };
+
+            // All properties are nullable in DTO for flexibility
+            $type = $type;
+
+            $properties .= "    public {$type} \${$column};\n";
+            $toArray .= "            '{$column}' => \$this->{$column},\n";
         }
 
         return <<<PHP
@@ -175,20 +240,49 @@ class MakePattren extends Command
 
         namespace App\DTOs;
 
-        class {$name}DTO
-        {
-            {$properties}
+        use JsonSerializable;
+        use DateTime;
 
-            public function __construct(array \$data)
-            {
+        class {$name}DTO implements JsonSerializable
+        {
+        {$properties}
+            public function __construct(
+                array \$data = []
+            ) {
                 foreach (\$data as \$key => \$value) {
-                    \$this->\$key = \$value;
+                    if (property_exists(\$this, \$key)) {
+                        if (\$value instanceof DateTime || (is_string(\$value) && strtotime(\$value))) {
+                            \$this->\$key = \$value instanceof DateTime ? \$value : new DateTime(\$value);
+                        } else {
+                            \$this->\$key = \$value;
+                        }
+                    }
                 }
+            }
+
+            public function toArray(): array
+            {
+                \$array = [
+        {$toArray}
+                ];
+
+                // Convert DateTime objects to strings
+                foreach (\$array as \$key => \$value) {
+                    if (\$value instanceof DateTime) {
+                        \$array[\$key] = \$value->format('Y-m-d H:i:s');
+                    }
+                }
+
+                return \$array;
+            }
+
+            public function jsonSerialize(): array
+            {
+                return \$this->toArray();
             }
         }
         PHP;
     }
-
     private function getControllerTemplate($name, $location)
     {
         $namespace = "App\Http\Controllers";
