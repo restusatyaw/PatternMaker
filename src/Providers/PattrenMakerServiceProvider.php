@@ -5,7 +5,6 @@ namespace Restusatyaw\PattrenMaker\Providers;
 use Illuminate\Support\ServiceProvider;
 use Restusatyaw\PattrenMaker\Console\Commands\MakeAutomaticSeeder;
 use Restusatyaw\PattrenMaker\Console\Commands\MakePattren;
-use Restusatyaw\PattrenMaker\Console\Commands\MakeFullPattren;
 
 class PattrenMakerServiceProvider extends ServiceProvider
 {
@@ -20,7 +19,6 @@ class PattrenMakerServiceProvider extends ServiceProvider
         $this->commands([
             MakeAutomaticSeeder::class,
             MakePattren::class,
-            MakeFullPattren::class,
         ]);
     }
 
