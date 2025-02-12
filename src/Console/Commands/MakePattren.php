@@ -247,7 +247,7 @@ class MakePattren extends Command
     
             private function toDTO(\$model): {$name}DTO
             {
-                return new {$name}DTO(...\$model->toArray());
+                return new {$name}DTO(\$model->toArray());
             }
         }
         PHP;
