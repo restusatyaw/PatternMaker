@@ -117,14 +117,9 @@ class MakePattren extends Command
                 \$query = $name::query();
 
                 // Dynamic search based on searchable columns
-                if (isset(\$filterData['search']) && \$filterData['search'] != '') {
-                    \$query->where(function(\$q) use (\$filterData) {
-                        \$columns = Schema::getColumnListing((new $name)->getTable());
-                        foreach(\$columns as \$column) {
-                            \$q->orWhere(\$column, 'like', '%' . \$filterData['search'] . '%');
-                        }
-                    });
-                }
+                // if (isset(\$filterData['search']) && \$filterData['search'] != '') {
+                    
+                // }
 
                 return \$query;
             }
@@ -358,7 +353,9 @@ class MakePattren extends Command
         }
     
         $viewPath = strtolower(Str::kebab($name)); // Ubah menjadi format kebab-case untuk Blade view
-    
+        
+        $lower = Str::lower($name);
+
         return <<<PHP
         <?php
     
@@ -384,8 +381,8 @@ class MakePattren extends Command
                 try {
                     return view('backoffice.pages.{$viewPath}.index', [
                         'page_title' => '{$name}',
-                        'urlCreate' => route('backoffice.{$name}.create'),
-                        'permission_create' => '{$name}.create',
+                        'urlCreate' => route('backoffice.{$lower}.create'),
+                        'permission_create' => '{$lower}.create',
                     ]);
                 } catch (Exception \$e) {
                     Log::error("Error loading index page for {$name}: " . \$e->getMessage());
@@ -400,7 +397,7 @@ class MakePattren extends Command
                         'page_title' => 'Create {$name}',
                         'data' => null,
                         'isForm' => true,
-                        'urlBack' => route('backoffice.{$name}.index'),
+                        'urlBack' => route('backoffice.{$lower}.index'),
                     ]);
                 } catch (Exception \$e) {
                     Log::error("Error loading create page for {$name}: " . \$e->getMessage());
@@ -428,7 +425,7 @@ class MakePattren extends Command
                         'page_title' => 'Edit {$name}',
                         'data' => \$this->{$name}Service->findById(\$id),
                         'isForm' => true,
-                        'urlBack' => route('backoffice.{$name}.index'),
+                        'urlBack' => route('backoffice.{$lower}.index'),
                     ]);
                 } catch (Exception \$e) {
                     Log::error("Error loading edit page for {$name} with ID {\$id}: " . \$e->getMessage());
