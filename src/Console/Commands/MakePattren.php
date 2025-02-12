@@ -3,6 +3,7 @@
 namespace Restusatyaw\PattrenMaker\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -134,70 +135,116 @@ class MakePattren extends Command
     private function getServiceTemplate($name)
     {
         $name = Str::studly($name);
+        $lower = Str::lower($name);
         return <<<PHP
         <?php
-
+    
         namespace App\Services;
-
-        use App\Repositories\\{$name}Repository;
-        use App\DTOs\\{$name}DTO;
+    
+        use App\Repositories\{$name}Repository;
+        use App\DTOs\{$name}DTO;
         use Illuminate\Support\Collection;
         use Yajra\DataTables\Facades\DataTables;
-
+        use Illuminate\Support\Facades\Log;
+        use Illuminate\Support\Facades\DB;
+        use Exception;
+    
         class {$name}Service
         {
-            protected \${$name}Repository;
-
-            public function __construct({$name}Repository \${$name}Repository)
+            protected \${$lower}Repository;
+    
+            public function __construct({$name}Repository \${$lower}Repository)
             {
-                \$this->{$name}Repository = \${$name}Repository;
+                \$this->{$lower}Repository = \${$lower}Repository;
             }
-
+    
             public function getAll(): Collection
             {
-                \$data = \$this->{$name}Repository->getAll();
-                return \$data->map(fn(\$item) => \$this->toDTO(\$item));
+                try {
+                    \$data = \$this->{$lower}Repository->getAll();
+                    return \$data->map(fn(\$item) => \$this->toDTO(\$item));
+                } catch (Exception \$e) {
+                    Log::error("Error getting all {$lower}: " . \$e->getMessage());
+                    return collect([]);
+                }
             }
-
+    
             public function findById(\$id)
             {
-                \$item = \$this->{$name}Repository->findById(\$id);
-                return \$item ? \$this->toDTO(\$item) : null;
+                try {
+                    \$item = \$this->{$lower}Repository->findById(\$id);
+                    return \$item ? \$this->toDTO(\$item) : null;
+                } catch (Exception \$e) {
+                    Log::error("Error finding {$lower} with ID {\$id}: " . \$e->getMessage());
+                    return null;
+                }
             }
-
+    
             public function create(array \$data)
             {
-                \$item = \$this->{$name}Repository->create(\$data);
-                return \$this->toDTO(\$item);
+                DB::beginTransaction();
+                try {
+                    \$item = \$this->{$lower}Repository->create(\$data);
+                    DB::commit();
+                    return \$this->toDTO(\$item);
+                } catch (Exception \$e) {
+                    DB::rollback();
+                    Log::error("Error creating {$lower}: " . \$e->getMessage());
+                    return null;
+                }
             }
-
+    
             public function update(\$id, array \$data)
             {
-                \$item = \$this->{$name}Repository->update(\$id, \$data);
-                return \$item ? \$this->toDTO(\$item) : null;
+                DB::beginTransaction();
+                try {
+                    \$item = \$this->{$lower}Repository->update(\$id, \$data);
+                    DB::commit();
+                    return \$item ? \$this->toDTO(\$item) : null;
+                } catch (Exception \$e) {
+                    DB::rollback();
+                    Log::error("Error updating {$lower} with ID {\$id}: " . \$e->getMessage());
+                    return null;
+                }
             }
-
+    
             public function delete(\$id): bool
             {
-                return \$this->{$name}Repository->delete(\$id);
+                DB::beginTransaction();
+                try {
+                    \$deleted = \$this->{$lower}Repository->delete(\$id);
+                    DB::commit();
+                    return \$deleted;
+                } catch (Exception \$e) {
+                    DB::rollback();
+                    Log::error("Error deleting {$lower} with ID {\$id}: " . \$e->getMessage());
+                    return false;
+                }
             }
-
+    
             public function getDatatable(array \$filterData)
             {
-                \$query = \$this->{$name}Repository->getFilteredData(\$filterData);
-
-                return DataTables::of(\$query)
-                    ->addColumn('action', function (\$row) {
-                        return view('components.action-buttons', [
-                            'id' => \$row->id,
-                            'editRoute' => route('{$name}.edit', \$row->id),
-                            'deleteRoute' => route('{$name}.destroy', \$row->id)
-                        ])->render();
-                    })
-                    ->rawColumns(['action'])
-                    ->make(true);
+                try {
+                    \$query = \$this->{$lower}Repository->getFilteredData(\$filterData);
+    
+                    return DataTables::of(\$query)
+                        ->addColumn('action', function (\$row) {
+                            return view('backoffice.components.actionDatatable', [
+                                'id' => \$row->id,
+                                'url_edit' => route('backoffice.{$lower}.edit', \$row->id),
+                                'url_delete' => route('backoffice.{$lower}.destroy', \$row->id),
+                                'permission_edit' => '{$lower}.edit',
+                                'permission_delete' => '{$lower}.delete',
+                            ])->render();
+                        })
+                        ->rawColumns(['action'])
+                        ->make(true);
+                } catch (Exception \$e) {
+                    Log::error("Error getting datatable for {$lower}: " . \$e->getMessage());
+                    return response()->json(['error' => 'Failed to load data'], 500);
+                }
             }
-
+    
             private function toDTO(\$model): {$name}DTO
             {
                 return new {$name}DTO(...\$model->toArray());
@@ -205,44 +252,46 @@ class MakePattren extends Command
         }
         PHP;
     }
+    
 
     private function getDTOTemplate($name, $table)
     {
         if (!Schema::hasTable($table)) {
             return "// Table {$table} does not exist";
         }
-
+    
         $columns = Schema::getColumnListing($table);
         $properties = '';
         $toArray = '';
-        
+    
         foreach ($columns as $column) {
             $columnType = Schema::getColumnType($table, $column);
-            
+    
+            // Cek apakah kolom nullable
+            $isNullable = $this->isColumnNullable($table, $column);
+            $nullablePrefix = $isNullable ? '?' : '';
+    
             // Map database types to PHP types
-            $type = match(true) {
+            $type = match (true) {
                 in_array($columnType, ['integer', 'bigint', 'smallint']) => 'int',
                 in_array($columnType, ['decimal', 'float', 'double']) => 'float',
                 in_array($columnType, ['boolean']) => 'bool',
-                in_array($columnType, ['datetime', 'timestamp']) => '?\\DateTime',
+                in_array($columnType, ['datetime', 'timestamp']) => '\\DateTime',
                 default => 'string'
             };
-
-            // All properties are nullable in DTO for flexibility
-            $type = $type;
-
-            $properties .= "    public {$type} \${$column};\n";
+    
+            $properties .= "    public {$nullablePrefix}{$type} \${$column};\n";
             $toArray .= "            '{$column}' => \$this->{$column},\n";
         }
-
+    
         return <<<PHP
         <?php
-
+    
         namespace App\DTOs;
-
+    
         use JsonSerializable;
         use DateTime;
-
+    
         class {$name}DTO implements JsonSerializable
         {
         {$properties}
@@ -259,23 +308,23 @@ class MakePattren extends Command
                     }
                 }
             }
-
+    
             public function toArray(): array
             {
                 \$array = [
         {$toArray}
                 ];
-
+    
                 // Convert DateTime objects to strings
                 foreach (\$array as \$key => \$value) {
                     if (\$value instanceof DateTime) {
                         \$array[\$key] = \$value->format('Y-m-d H:i:s');
                     }
                 }
-
+    
                 return \$array;
             }
-
+    
             public function jsonSerialize(): array
             {
                 return \$this->toArray();
@@ -283,9 +332,27 @@ class MakePattren extends Command
         }
         PHP;
     }
+    
+    /**
+     * Cek apakah suatu kolom nullable di database.
+     */
+    private function isColumnNullable($table, $column)
+    {
+        $databaseName = config('database.connections.mysql.database');
+    
+        $result = DB::selectOne("
+            SELECT IS_NULLABLE 
+            FROM information_schema.columns 
+            WHERE table_schema = ? AND table_name = ? AND column_name = ?",
+            [$databaseName, $table, $column]
+        );
+    
+        return $result->IS_NULLABLE === 'YES';
+    }
+    
     private function getControllerTemplate($name, $location)
     {
-        $namespace = "App\Http\Controllers";
+        $namespace = "App\\Http\\Controllers";
         if ($location) {
             $namespace .= "\\" . Str::studly($location);
         }
@@ -297,9 +364,11 @@ class MakePattren extends Command
     
         namespace {$namespace};
     
-        use App\Http\Controllers\Controller;
-        use App\Services\\{$name}Service;
-        use Illuminate\Http\Request;
+        use App\\Http\\Controllers\\Controller;
+        use App\\Services\\{$name}Service;
+        use Illuminate\\Http\\Request;
+        use Illuminate\\Support\\Facades\\Log;
+        use Exception;
     
         class {$name}Controller extends Controller
         {
@@ -312,58 +381,112 @@ class MakePattren extends Command
     
             public function index()
             {
-                return view('backoffice.pages.{$viewPath}.index', [
-                    'page_title' => '{$name} Management'
-                ]);
+                try {
+                    return view('backoffice.pages.{$viewPath}.index', [
+                        'page_title' => '{$name}',
+                        'urlCreate' => route('backoffice.{$name}.create'),
+                        'permission_create' => '{$name}.create',
+                    ]);
+                } catch (Exception \$e) {
+                    Log::error("Error loading index page for {$name}: " . \$e->getMessage());
+                    return redirect()->back()->with('error', 'Failed to load page.');
+                }
             }
     
             public function create()
             {
-                return view('backoffice.pages.{$viewPath}.create', [
-                    'page_title' => 'Create {$name}'
-                ]);
+                try {
+                    return view('backoffice.pages.{$viewPath}.create', [
+                        'page_title' => 'Create {$name}',
+                        'data' => null,
+                        'isForm' => true,
+                        'urlBack' => route('backoffice.{$name}.index'),
+                    ]);
+                } catch (Exception \$e) {
+                    Log::error("Error loading create page for {$name}: " . \$e->getMessage());
+                    return redirect()->back()->with('error', 'Failed to load page.');
+                }
             }
     
             public function show(\$id)
             {
-                return view('backoffice.pages.{$viewPath}.show', [
-                    'page_title' => 'Detail {$name}',
-                    'data' => \$this->{$name}Service->findById(\$id)
-                ]);
+                try {
+                    return view('backoffice.pages.{$viewPath}.show', [
+                        'page_title' => 'Detail {$name}',
+                        'data' => \$this->{$name}Service->findById(\$id)
+                    ]);
+                } catch (Exception \$e) {
+                    Log::error("Error loading show page for {$name} with ID {\$id}: " . \$e->getMessage());
+                    return redirect()->back()->with('error', 'Failed to load page.');
+                }
             }
     
             public function edit(\$id)
             {
-                return view('backoffice.pages.{$viewPath}.edit', [
-                    'page_title' => 'Edit {$name}',
-                    'data' => \$this->{$name}Service->findById(\$id)
-                ]);
+                try {
+                    return view('backoffice.pages.{$viewPath}.edit', [
+                        'page_title' => 'Edit {$name}',
+                        'data' => \$this->{$name}Service->findById(\$id),
+                        'isForm' => true,
+                        'urlBack' => route('backoffice.{$name}.index'),
+                    ]);
+                } catch (Exception \$e) {
+                    Log::error("Error loading edit page for {$name} with ID {\$id}: " . \$e->getMessage());
+                    return redirect()->back()->with('error', 'Failed to load page.');
+                }
             }
     
             public function store(Request \$request)
             {
-                \$this->{$name}Service->create(\$request->all());
-                return redirect()->route('{$viewPath}.index')->with('success', '{$name} created successfully.');
+                try {
+                    \$this->{$name}Service->create(\$request->all());
+                    return redirect()->route('{$viewPath}.index')->with('success', '{$name} created successfully.');
+                } catch (Exception \$e) {
+                    Log::error("Error storing {$name}: " . \$e->getMessage());
+                    return redirect()->back()->with('error', 'Failed to create data.');
+                }
             }
     
             public function update(Request \$request, \$id)
             {
-                \$this->{$name}Service->update(\$id, \$request->all());
-                return redirect()->route('{$viewPath}.index')->with('success', '{$name} updated successfully.');
+                try {
+                    \$this->{$name}Service->update(\$id, \$request->all());
+                    return redirect()->route('{$viewPath}.index')->with('success', '{$name} updated successfully.');
+                } catch (Exception \$e) {
+                    Log::error("Error updating {$name} with ID {\$id}: " . \$e->getMessage());
+                    return redirect()->back()->with('error', 'Failed to update data.');
+                }
             }
     
             public function destroy(\$id)
             {
-                \$this->{$name}Service->delete(\$id);
-                return redirect()->route('{$viewPath}.index')->with('success', '{$name} deleted successfully.');
+                try {
+                    \$this->{$name}Service->delete(\$id);
+                    return response()->json([
+                        'status' => true,
+                        'message' => '{$name} deleted successfully.'
+                    ], 200);
+                } catch (Exception \$e) {
+                    Log::error("Error deleting {$name} with ID {\$id}: " . \$e->getMessage());
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Failed to delete data.'
+                    ], 500);
+                }
             }
     
             public function getDatatable(Request \$request)
             {
-                return \$this->{$name}Service->getDatatable(\$request->all());
+                try {
+                    return \$this->{$name}Service->getDatatable(\$request->all());
+                } catch (Exception \$e) {
+                    Log::error("Error getting datatable for {$name}: " . \$e->getMessage());
+                    return response()->json(['error' => 'Failed to load data'], 500);
+                }
             }
         }
         PHP;
     }
+    
     
 }
