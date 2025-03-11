@@ -38,7 +38,6 @@ class MakePattern extends Command
         } else {
             // For regular resources
             $controllerPath .= '/' . $name;
-            $servicePath .= '/' . $name;
         }
 
         // Ensure directories exist
