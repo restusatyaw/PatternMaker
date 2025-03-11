@@ -3,8 +3,8 @@
 namespace Restusatyaw\PattrenMaker\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Restusatyaw\PatternMaker\Console\Commands\MakePattern;
 use Restusatyaw\PattrenMaker\Console\Commands\MakeAutomaticSeeder;
-use Restusatyaw\PattrenMaker\Console\Commands\MakePattren;
 
 class PattrenMakerServiceProvider extends ServiceProvider
 {
@@ -18,7 +18,7 @@ class PattrenMakerServiceProvider extends ServiceProvider
         // Daftarkan command jika kamu ingin membuat perintah Artisan
         $this->commands([
             MakeAutomaticSeeder::class,
-            MakePattren::class,
+            MakePattern::class,
         ]);
     }
 
