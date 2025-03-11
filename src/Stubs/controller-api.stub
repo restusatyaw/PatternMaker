@@ -1,0 +1,106 @@
+<?php
+
+namespace App\Http\Controllers\{{namespace}};
+
+use App\Services\{{namespace}}{{name}}Service;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Log;
+use Exception;
+
+class {{name}}Controller extends Controller
+{
+    protected ${{name}}Service;
+
+    public function __construct({{name}}Service ${{name}}Service)
+    {
+        $this->{{name}}Service = ${{name}}Service;
+    }
+
+    public function index()
+    {
+        try {
+            $data = $this->{{name}}Service->getAll();
+            return self::responseJson(200, true, 'Success', $data);
+        } catch (Exception $e) {
+            Log::error("Error fetching all {{name}}: " . $e->getMessage());
+            return self::responseJson(500, false, 'Failed to fetch data', []);
+        }
+    }
+
+    public function paginate(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10);
+            $data = $this->{{name}}Service->paginate($perPage);
+            return self::responseJson(200, true, 'Success', $data);
+        } catch (Exception $e) {
+            Log::error("Error paginating {{name}}: " . $e->getMessage());
+            return self::responseJson(500, false, 'Pagination failed', []);
+        }
+    }
+
+    public function show($id)
+    {
+        try {
+            $data = $this->{{name}}Service->findById($id);
+
+            if (!$data) {
+                return self::responseJson(404, false, '{{name}} not found', null);
+            }
+
+            return self::responseJson(200, true, 'Success', $data);
+        } catch (Exception $e) {
+            Log::error("Error finding {{name}} with ID {$id}: " . $e->getMessage());
+            return self::responseJson(500, false, 'Error retrieving data', null);
+        }
+    }
+
+    public function store(Request $request)
+    {
+        try {
+            $data = $this->{{name}}Service->create($request->all());
+
+            if (!$data) {
+                return self::responseJson(500, false, 'Failed to create {{name}}', null);
+            }
+
+            return self::responseJson(201, true, 'Created successfully', $data);
+        } catch (Exception $e) {
+            Log::error("Error creating {{name}}: " . $e->getMessage());
+            return self::responseJson(500, false, 'Creation failed', null);
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $data = $this->{{name}}Service->update($id, $request->all());
+
+            if (!$data) {
+                return self::responseJson(404, false, '{{name}} not found or update failed', null);
+            }
+
+            return self::responseJson(200, true, 'Updated successfully', $data);
+        } catch (Exception $e) {
+            Log::error("Error updating {{name}} with ID {$id}: " . $e->getMessage());
+            return self::responseJson(500, false, 'Update failed', null);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $deleted = $this->{{name}}Service->delete($id);
+
+            if (!$deleted) {
+                return self::responseJson(404, false, '{{name}} not found or delete failed', null);
+            }
+
+            return self::responseJson(200, true, 'Deleted successfully', null);
+        } catch (Exception $e) {
+            Log::error("Error deleting {{name}} with ID {$id}: " . $e->getMessage());
+            return self::responseJson(500, false, 'Deletion failed', null);
+        }
+    }
+}

@@ -1,0 +1,74 @@
+<?php
+
+namespace App\Repositories;
+
+use App\Models\{{name}};
+
+class {{name}}Repository
+{
+    public function getAll()
+    {
+        return {{name}}::all();
+    }
+
+    public function findById($id, $relations = [])
+    {
+        $query = {{name}}::find($id);
+
+            if (!empty($relations)) {
+                $query->load($relations);
+            }
+
+        return $query;
+    }
+    public function filteredData(array $data)
+    {
+        $data = {{name}}::query();
+
+        //logic your filter data here !
+        // this example filter, recommended use this !
+        // if (isset($filterData['your_field_name']) && $filterData['your_field_name'] != '') {
+        //    $query->where('your_field_name', $filterData['your_field_name']);
+        //}
+
+        return $data;
+    }
+
+
+    public function create(array $data)
+    {
+        return {{name}}::create($data);
+    }
+
+    public function update($id, array $data)
+    {
+        $model = {{name}}::find($id);
+        if ($model) {
+            $model->update($data);
+            return $model;
+        }
+        return $model;
+    }
+
+    public function delete($id)
+    {
+        return {{name}}::destroy($id);
+    }
+
+    public function datatableQuery(array $filters)
+    {
+        $data = {{name}}::query();
+
+        //logic your filter data here !
+        // this example filter, recommended use this !
+        // if (isset($filterData['your_field_name']) && $filterData['your_field_name'] != '') {
+        //    $query->where('your_field_name', $filterData['your_field_name']);
+        //}
+
+        return $data;
+    }
+    public function paginate(int $perPage = 10)
+    {
+        return {{name}}::paginate($perPage);
+    }
+}

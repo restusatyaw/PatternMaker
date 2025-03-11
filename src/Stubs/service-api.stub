@@ -1,0 +1,122 @@
+<?php
+
+namespace App\Services;
+
+use App\Repositories\{{name}}Repository;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\Facades\DataTables;
+use Exception;
+
+class {{name}}Service
+{
+    protected ${{name}}Repository;
+
+    public function __construct({{name}}Repository ${{name}}Repository)
+    {
+        $this->{{name}}Repository = ${{name}}Repository;
+    }
+
+    public function getAll(): Collection
+    {
+        try {
+            return $this->{{name}}Repository->getAll();
+        } catch (Exception $e) {
+            Log::error("Error getting all {{name}}: " . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    public function findById($id)
+    {
+        try {
+            return $this->{{name}}Repository->findById($id);
+        } catch (Exception $e) {
+            Log::error("Error finding {{name}} with ID {$id}: " . $e->getMessage());
+            return $e;
+        }
+    }
+
+    public function store(array $data)
+    {
+        DB::beginTransaction();
+        try {
+            $item = $this->{{name}}Repository->create($data);
+            DB::commit();
+            return $item;
+        } catch (Exception $e) {
+            DB::rollback();
+            Log::error("Error creating {{name}}: " . $e->getMessage());
+            return $e;
+        }
+    }
+    public function update(string $id, array $data)
+    {
+        DB::beginTransaction();
+        try {
+            $item = $this->{{name}}Repository->update($id, $data);
+            DB::commit();
+            return $item;
+        } catch (Exception $e) {
+            DB::rollback();
+            Log::error("Error update {{name}}: " . $e->getMessage());
+            return $e;
+        }
+    }
+    public function destroy(string $id)
+    {
+        DB::beginTransaction();
+        try {
+            $item = $this->{{name}}Repository->destroy($id);
+            DB::commit();
+            return $item;
+        } catch (Exception $e) {
+            DB::rollback();
+            Log::error("Error destroy {{name}}: " . $e->getMessage());
+            return $e;
+        }
+    }
+
+    public function datatables(array $filters)
+    {
+        $query = $this->{{name}}Repository->datatableQuery($filters);
+
+        return DataTables::of($query)
+            ->addColumn('action', function ($row) {
+                return view('backoffice.components.actionDatatable', [
+                    'id' => $row->id,
+                    'url_edit' => route('your.prefix.url', $row->id),
+                    'url_delete' => route('your.prefix.url', $row->id),
+                    'permission_edit' => 'your.permission.set',
+                    'permission_delete' => 'your.permission.set',
+                ])->render();
+            })
+            ->rawColumns(['action'])
+        ->make(true);
+    }
+
+    public function paginate(int $perPage = 10)
+    {
+        try {
+            $pagination = $this->{{name}}Repository->paginate($perPage);
+
+            return [
+                'current_page' => $pagination->currentPage(),
+                'total_page' => $pagination->lastPage(),
+                'total_data_per_page' => $pagination->perPage(),
+                'total_data' => $pagination->total(),
+                'data' => $pagination->items(),
+            ];
+        } catch (Exception $e) {
+            Log::error("Error paginating {{name}}: " . $e->getMessage());
+            return [
+                'current_page' => 1,
+                'total_page' => 1,
+                'total_data_per_page' => $perPage,
+                'total_data' => 0,
+                'data' => [],
+            ];
+        }
+    }
+}

@@ -1,0 +1,138 @@
+<?php
+
+namespace App\Http\Controllers\{{namespace}};
+
+use App\Services\{{namespace}}{{name}}Service;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Log;
+use Exception;
+
+class {{name}}Controller extends Controller
+{
+    protected ${{name}}Service;
+
+    public function __construct({{name}}Service ${{name}}Service)
+    {
+        $this->{{name}}Service = ${{name}}Service;
+
+        $this->middleware('checkpermissionuser:{{name}}.index')->only(['index', 'show', 'getData']);
+        $this->middleware('checkpermissionuser:{{name}}.create')->only(['store']);
+        $this->middleware('checkpermissionuser:{{name}}.update')->only(['edit', 'update']);
+        $this->middleware('checkpermissionuser:{{name}}.delete')->only(['destroy']);
+    }
+
+    public function index()
+    {
+        try {
+            return view('{{name}}.form', [
+                'page_title' => '{{name}}',
+            ]);
+        } catch (Exception $e) {
+            Log::error("Error fetching all {{name}}: " . $e->getMessage());
+            return self::error('Failed to fetch data');
+        }
+    }
+
+    public function getData(Request $request)
+    {
+        try {
+            $filters = $request->all();
+            $data = $this->{{name}}Service->datatables($filters);
+        } catch (Exception $e) {
+            Log::error("Error fetching paginated {{name}} data: " . $e->getMessage());
+        }
+    }
+
+    public function show($id)
+    {
+        try {
+            $data = $this->{{name}}Service->findById($id);
+
+            if (!$data) {
+                return self::error('{{name}} not found');
+            }
+
+            return view('{{name}}.show', compact('data'));
+        } catch (Exception $e) {
+            Log::error("Error finding {{name}} with ID {$id}: " . $e->getMessage());
+            return self::error('Error retrieving data');
+        }
+    }
+
+    public function create()
+    {
+        $data = null;
+        return view('{{name}}.form', [
+            'page_title' => 'Create Data {{name}}',
+            'data' => $data
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        try {
+            $data = $this->{{name}}Service->create($request->all());
+
+            if (!$data) {
+                return self::error('Failed to create {{name}}');
+            }
+
+            return self::success('Created successfully', '{{name}}.index');
+        } catch (Exception $e) {
+            Log::error("Error creating {{name}}: " . $e->getMessage());
+            return self::error('Creation failed');
+        }
+    }
+
+    public function edit($id)
+    {
+        try {
+            $data = $this->{{name}}Service->findById($id);
+
+            if (!$data) {
+                return self::error('{{name}} not found');
+            }
+
+            return view('{{name}}.form', [
+                'page_title' => 'Edit Data {{name}}',
+                'data' => $data
+            ]);
+        } catch (Exception $e) {
+            Log::error("Error finding {{name}} with ID {$id}: " . $e->getMessage());
+            return self::error('Error retrieving data');
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $data = $this->{{name}}Service->update($id, $request->all());
+
+            if (!$data) {
+                return self::error('{{name}} not found or update failed');
+            }
+
+            return self::success('Updated successfully', '{{name}}.index');
+        } catch (Exception $e) {
+            Log::error("Error updating {{name}} with ID {$id}: " . $e->getMessage());
+            return self::error('Update failed');
+        }
+    }
+
+    public function destroy($id)
+    {
+        try { 
+            $deleted = $this->{{name}}Service->destroy($id);
+
+            if (!$deleted) {
+                return self::error('{{name}} not found or delete failed');
+            }
+
+            return self::responseJson(200, true, 'Success delete data', null);
+        } catch (Exception $e) {
+            Log::error("Error deleting {{name}} with ID {$id}: " . $e->getMessage());
+            return self::responseJson(500, false, 'Failed fetch data', null);
+        }
+    }
+}
