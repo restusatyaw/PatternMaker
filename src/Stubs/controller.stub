@@ -72,7 +72,7 @@ class {{name}}Controller extends Controller
     public function store(Request $request)
     {
         try {
-            $data = $this->{{name}}Service->create($request->all());
+            $data = $this->{{name}}Service->store($request->all());
 
             if (!$data) {
                 return self::error('Failed to create {{name}}');
