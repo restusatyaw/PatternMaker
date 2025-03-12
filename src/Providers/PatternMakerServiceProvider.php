@@ -1,12 +1,12 @@
 <?php
 
-namespace Restusatyaw\PattrenMaker\Providers;
+namespace Restusatyaw\PatternMaker\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Restusatyaw\PatternMaker\Console\Commands\MakeAutomaticSeeder;
 use Restusatyaw\PatternMaker\Console\Commands\MakePattern;
-use Restusatyaw\PattrenMaker\Console\Commands\MakeAutomaticSeeder;
 
-class PattrenMakerServiceProvider extends ServiceProvider
+class PatternMakerServiceProvider extends ServiceProvider
 {
     /**
      * Daftarkan layanan di dalam container.
