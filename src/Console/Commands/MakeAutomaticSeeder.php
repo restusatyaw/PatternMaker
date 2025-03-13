@@ -1,6 +1,6 @@
 <?php
 
-namespace Restusatyaw\PatternMaker\Console\Commands;
+namespace Restusatyaw\PattrenMaker\Console\Commands;
 
 
 use Illuminate\Console\Command;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Restusatyaw\PatternMaker\Console\Commands;
+namespace Restusatyaw\PattrenMaker\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
-class MakePattern extends Command
+class MakePattren extends Command
 {
-    protected $signature = 'make:pattern {name} {--api : Generate API resources}';
+    protected $signature = 'make:Pattren {name} {--api : Generate API resources}';
     protected $description = 'Create Service, Repository, and Controller automatically';
 
     public function handle()
