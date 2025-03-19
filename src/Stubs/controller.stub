@@ -6,20 +6,30 @@ use App\Services\{{name}}Service;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+
+
 use Exception;
 
-class {{name}}Controller extends Controller
+class {{name}}Controller extends Controller implements HasMiddleware
 {
     protected ${{name}}Service;
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('auth:web'), // 🔹 use type guard this, if u wanna use this for api , use auth:api, otherwise auth:web
+            new Middleware('permission:{{name}}.index', only: ['index', 'show', 'getDatatable']),
+            new Middleware('permission:{{name}}.create', only: ['store']),
+            new Middleware('permission:{{name}}.update', only: ['edit', 'update']),
+            new Middleware('permission:{{name}}.delete', only: ['destroy']),
+        ];
+    }
 
     public function __construct({{name}}Service ${{name}}Service)
     {
         $this->{{name}}Service = ${{name}}Service;
-
-        $this->middleware('checkpermissionuser:{{name}}.index')->only(['index', 'show', 'getData']);
-        $this->middleware('checkpermissionuser:{{name}}.create')->only(['store']);
-        $this->middleware('checkpermissionuser:{{name}}.update')->only(['edit', 'update']);
-        $this->middleware('checkpermissionuser:{{name}}.delete')->only(['destroy']);
     }
 
     public function index()
