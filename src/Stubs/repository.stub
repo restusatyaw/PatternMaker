@@ -16,7 +16,7 @@ class {{name}}Repository
         $query = {{name}}::find($id);
 
             if (!empty($relations)) {
-                $query->load($relations);
+                $query->with($relations);
             }
 
         return $query;

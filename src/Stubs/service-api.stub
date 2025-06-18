@@ -68,7 +68,7 @@ class {{name}}Service
     {
         DB::beginTransaction();
         try {
-            $item = $this->{{name}}Repository->destroy($id);
+            $item = $this->{{name}}Repository->delete($id);
             DB::commit();
             return $item;
         } catch (Exception $e) {
@@ -76,24 +76,6 @@ class {{name}}Service
             Log::error("Error destroy {{name}}: " . $e->getMessage());
             return $e;
         }
-    }
-
-    public function datatables(array $filters)
-    {
-        $query = $this->{{name}}Repository->datatableQuery($filters);
-
-        return DataTables::of($query)
-            ->addColumn('action', function ($row) {
-                return view('backoffice.components.actionDatatable', [
-                    'id' => $row->id,
-                    'url_edit' => route('your.prefix.url', $row->id),
-                    'url_delete' => route('your.prefix.url', $row->id),
-                    'permission_edit' => 'your.permission.set',
-                    'permission_delete' => 'your.permission.set',
-                ])->render();
-            })
-            ->rawColumns(['action'])
-        ->make(true);
     }
 
     public function paginate(int $perPage = 10)

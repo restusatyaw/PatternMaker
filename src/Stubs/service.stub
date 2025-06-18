@@ -31,10 +31,11 @@ class {{name}}Service
     public function findById($id)
     {
         try {
-            return $this->{{name}}Repository->findById($id);
+            $relations -[''];
+            return $this->{{name}}Repository->findById($id, $relations);
         } catch (Exception $e) {
             Log::error("Error finding {{name}} with ID {$id}: " . $e->getMessage());
-            return $e;
+            throw $e
         }
     }
 
@@ -48,7 +49,7 @@ class {{name}}Service
         } catch (Exception $e) {
             DB::rollback();
             Log::error("Error creating {{name}}: " . $e->getMessage());
-            return $e;
+            throw $e
         }
     }
     public function update(string $id, array $data)
@@ -61,20 +62,20 @@ class {{name}}Service
         } catch (Exception $e) {
             DB::rollback();
             Log::error("Error update {{name}}: " . $e->getMessage());
-            return $e;
+            throw $e
         }
     }
     public function destroy(string $id)
     {
         DB::beginTransaction();
         try {
-            $item = $this->{{name}}Repository->destroy($id);
+            $item = $this->{{name}}Repository->delete($id);
             DB::commit();
             return $item;
         } catch (Exception $e) {
             DB::rollback();
             Log::error("Error destroy {{name}}: " . $e->getMessage());
-            return $e;
+            throw $e
         }
     } 
 
