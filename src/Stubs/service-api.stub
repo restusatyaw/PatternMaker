@@ -34,7 +34,7 @@ class {{name}}Service
             return $this->{{name}}Repository->findById($id);
         } catch (Exception $e) {
             Log::error("Error finding {{name}} with ID {$id}: " . $e->getMessage());
-            return $e;
+            throw $e;
         }
     }
 
@@ -48,7 +48,7 @@ class {{name}}Service
         } catch (Exception $e) {
             DB::rollback();
             Log::error("Error creating {{name}}: " . $e->getMessage());
-            return $e;
+            throw $e;
         }
     }
     public function update(string $id, array $data)
@@ -61,7 +61,7 @@ class {{name}}Service
         } catch (Exception $e) {
             DB::rollback();
             Log::error("Error update {{name}}: " . $e->getMessage());
-            return $e;
+            throw $e;
         }
     }
     public function destroy(string $id)
@@ -74,7 +74,7 @@ class {{name}}Service
         } catch (Exception $e) {
             DB::rollback();
             Log::error("Error destroy {{name}}: " . $e->getMessage());
-            return $e;
+            throw $e;
         }
     }
 

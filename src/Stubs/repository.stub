@@ -13,11 +13,13 @@ class {{name}}Repository
 
     public function findById($id, $relations = [])
     {
-        $query = {{name}}::find($id);
+        $query = {{name}}::query();
 
             if (!empty($relations)) {
                 $query->with($relations);
             }
+        
+        $datas = $query->find($id)
 
         return $query;
     }

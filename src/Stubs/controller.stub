@@ -35,7 +35,7 @@ class {{name}}Controller extends Controller implements HasMiddleware
     public function index()
     {
         try {
-            return view('{{name}}.form', [
+            return view('{{name}}.index', [
                 'page_title' => '{{name}}',
             ]);
         } catch (Exception $e) {
@@ -49,6 +49,7 @@ class {{name}}Controller extends Controller implements HasMiddleware
         try {
             $filters = $request->all();
             $data = $this->{{name}}Service->datatables($filters);
+            return $data;
         } catch (Exception $e) {
             Log::error("Error fetching paginated {{name}} data: " . $e->getMessage());
         }
